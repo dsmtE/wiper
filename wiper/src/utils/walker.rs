@@ -2,7 +2,7 @@ use std::ffi::OsStr;
 
 use walkdir::WalkDir;
 
-pub fn count_and_size(path: impl AsRef<std::path::Path>) -> (u64, u64) {
+pub fn count_and_size(path: impl AsRef<std::path::Path>) -> (usize, u64) {
     WalkDir::new(path)
         .into_iter()
         .filter_map(|e| e.ok())
@@ -50,4 +50,16 @@ where
         .filter_map(|e| e.ok())
         // .filter(|entry| entry.file_type().is_dir())
         .filter(|entry| filter_filename_predicate(entry.file_name()))
+}
+
+
+pub fn delete_entries(entries: &[walkdir::DirEntry]) -> Result<(), std::io::Error> {
+    // for entry in entries {
+    //     if entry.file_type().is_dir() {
+    //         std::fs::remove_dir_all(entry.path())?;
+    //     } else {
+    //         std::fs::remove_file(entry.path())?;
+    //     }
+    // }
+    Ok(())
 }

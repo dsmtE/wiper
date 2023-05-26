@@ -2,13 +2,13 @@ use tui::backend::Backend;
 use tui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Style};
 use tui::text::{Span, Spans};
-use tui::widgets::{Block, BorderType, Borders, Cell, Paragraph, Row, Table};
+use tui::widgets::{Block, BorderType, Borders, Cell, Paragraph, Row, Table, List, ListItem, ListState};
 use tui::Frame;
 
 use super::{actions::Actions, state::AppState};
 use crate::app::App;
 
-pub fn draw<B>(rect: &mut Frame<B>, app: &App)
+pub fn draw<B>(rect: &mut Frame<B>, app: &mut App)
 where
     B: Backend,
 {
@@ -18,7 +18,7 @@ where
     // Vertical layout
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(3), Constraint::Min(10)].as_ref())
+        .constraints([Constraint::Length(2), Constraint::Min(10)])
         .split(size);
 
     // Title
@@ -28,14 +28,25 @@ where
     // Body & Help
     let body_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Min(20), Constraint::Length(32)].as_ref())
+        .constraints([Constraint::Min(20), Constraint::Length(32)])
         .split(chunks[1]);
 
-    let body = draw_body(app.is_loading(), app.state());
-    rect.render_widget(body, body_chunks[0]);
+    let content_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(4), Constraint::Min(10)])
+        .split(body_chunks[0]);
 
     let help = draw_help(app.actions());
     rect.render_widget(help, body_chunks[1]);
+
+    // Content
+    rect.render_widget(app_infos(app.is_loading(), app.state()), content_chunks[0]);
+
+    let (content_list, content_list_state) = content(app.state_mut());
+    rect.render_stateful_widget(content_list, content_chunks[1], content_list_state);
+
+
+    
 }
 
 fn draw_title<'a>() -> Paragraph<'a> {
@@ -61,27 +72,19 @@ fn check_size(rect: &Rect) -> Result<(), String> {
     Ok(())
 }
 
-fn draw_body<'a>(loading: bool, state: &AppState) -> Paragraph<'a> {
-    let initialized_text = if state.is_initialized() {
-        "Initialized"
+fn app_infos<'a>(loading: bool, state: &AppState) -> Paragraph<'a> {
+    let paragraph = if loading {
+        Paragraph::new("Loading...")
     } else {
-        "Not Initialized !"
-    };
-    let loading_text = if loading { "Loading..." } else { "" };
 
-    let sleep_text = state
-        .count_sleep()
-        .map_or_else(String::default, |sleeps| format!("Sleep count: {}", sleeps));
-    let tick_text = state
-        .count_tick()
-        .map_or_else(String::default, |ticks| format!("Tick count: {}", ticks));
-    Paragraph::new(vec![
-        Spans::from(Span::raw(initialized_text)),
-        Spans::from(Span::raw(loading_text)),
-        Spans::from(Span::raw(sleep_text)),
-        Spans::from(Span::raw(tick_text)),
-    ])
-    .style(Style::default().fg(Color::LightCyan))
+        let tick_text = format!("Tick count: {}", state.counter_tick);
+    
+        Paragraph::new(vec![
+            Spans::from(Span::raw(tick_text)),
+        ])
+    };
+
+    paragraph.style(Style::default().fg(Color::LightCyan))
     .alignment(Alignment::Left)
     .block(
         Block::default()
@@ -89,6 +92,34 @@ fn draw_body<'a>(loading: bool, state: &AppState) -> Paragraph<'a> {
             .style(Style::default().fg(Color::White))
             .border_type(BorderType::Plain),
     )
+}
+
+fn format_item(item: &(walkdir::DirEntry, u64)) -> String {
+    let (entry, size) = item;
+    format!(
+        "path : {}, size: {:.2}MB",
+        entry.path().canonicalize().unwrap().to_str().unwrap(),
+        *size as f32 / 1000000.0
+    )
+}
+fn content<'a>(state: &mut AppState) -> (List<'a>, &mut ListState) {
+    (List::new(state.entries.items().iter().map(format_item).map(ListItem::new).enumerate().map(|(idx, item)| {
+        if state.selected_entries_idx.contains(&idx) {
+            // orange
+            item.style(Style::default().fg(Color::Rgb(255, 165, 0)))
+        } else {
+            item
+        }
+    }).collect::<Vec<_>>())
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Plain)
+                .title("Content"),
+        )
+        // .highlight_style(Style::default().fg(Color::LightCyan))
+        .highlight_symbol(">> "),
+        state.entries.state_mut())
 }
 
 fn draw_help(actions: &Actions) -> Table {

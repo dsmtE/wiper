@@ -1,11 +1,10 @@
 use std::sync::Arc;
-use std::time::Duration;
 
 use eyre::Result;
 use log::{error, info};
 
 use super::IoEvent;
-use crate::app::App;
+use crate::{app::{App, Arguments}, utils::walker::delete_entries};
 
 /// In the IO thread, we handle IO event without blocking the UI thread
 pub struct IoAsyncHandler {
@@ -20,8 +19,8 @@ impl IoAsyncHandler {
     /// We could be async here
     pub async fn handle_io_event(&mut self, io_event: IoEvent) {
         let result: std::result::Result<(), eyre::ErrReport> = match io_event {
-            IoEvent::Initialize => self.do_initialize().await,
-            IoEvent::Sleep(duration) => self.do_sleep(duration).await,
+            IoEvent::InitializeFromArgs(args) => self.do_initialize(&args).await,
+            IoEvent::DeleteEntries(entries) => self.do_selected_entries_deletion(entries.as_slice()).await,
         };
 
         if let Err(err) = result {
@@ -33,25 +32,22 @@ impl IoAsyncHandler {
     }
 
     /// We use dummy implementation here, just wait 1s
-    async fn do_initialize(&mut self) -> Result<()> {
+    async fn do_initialize(&mut self, args: &Arguments) -> Result<()> {
         info!("🚀 Initialize the application");
         let mut app = self.app.lock().await;
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        app.initialized(); // we could update the app state
+        app.initialize_from_args(args);
         info!("👍 Application initialized");
-
         Ok(())
     }
 
-    /// Just take a little break
-    async fn do_sleep(&mut self, duration: Duration) -> Result<()> {
-        info!("😴 Go sleeping for {:?}...", duration);
-        tokio::time::sleep(duration).await;
-        info!("⏰ Wake up !");
-        // Notify the app for having slept
+    async fn do_selected_entries_deletion(&mut self, entries: &[walkdir::DirEntry]) -> Result<()> {
+        info!("🚀 Delete selected entries");
         let mut app = self.app.lock().await;
-        app.sleeped();
+        delete_entries(entries);
 
+        app.scan_dir_update();
+
+        info!("👍 Selected entries deleted");
         Ok(())
     }
 }

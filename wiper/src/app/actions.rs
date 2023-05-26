@@ -7,7 +7,10 @@ use strum_macros::{Display as StrumDisplay, EnumIter};
 #[derive(Debug, Clone, Copy, Eq, PartialEq, StrumDisplay, EnumIter)]
 pub enum Action {
     Quit,
-    Sleep,
+    ToggleCurrent,
+    DeleteSelectedEntries,
+    Up,
+    Down,
 }
 
 impl Action {
@@ -15,7 +18,10 @@ impl Action {
     pub fn keys(&self) -> &[Key] {
         match self {
             Action::Quit => &[Key::Ctrl('c'), Key::Char('q')],
-            Action::Sleep => &[Key::Char('s')],
+            Action::ToggleCurrent => &[Key::Char(' ')],
+            Action::DeleteSelectedEntries => &[Key::Char('d')],
+            Action::Up => &[Key::Up],
+            Action::Down => &[Key::Down],
         }
     }
 }

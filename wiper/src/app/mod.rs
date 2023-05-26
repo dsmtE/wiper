@@ -5,10 +5,25 @@ use self::state::AppState;
 use crate::app::actions::Action;
 use crate::inputs::key::Key;
 use crate::io::IoEvent;
+use crate::utils::walker::{get_dir_list_from_path, is_node_modules, count_and_size};
 
 pub mod actions;
 pub mod state;
 pub mod ui;
+
+#[derive(clap::Parser, Clone, Debug)]
+#[command(author, version, about, long_about = None)]
+pub struct Arguments {
+    #[arg(help("root Path to search"), default_value_t = (".").to_string())]
+    pub root_path: String,
+    #[arg(
+        short,
+        long,
+        default_value_t = true,
+        help("do not search on subfolders")
+    )]
+    pub prune: bool,
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum AppReturn {
@@ -29,15 +44,11 @@ pub struct App {
 
 impl App {
     pub fn new(io_tx: tokio::sync::mpsc::Sender<IoEvent>) -> Self {
-        let actions = Actions::from_iter([Action::Quit]);
-        let is_loading = false;
-        let state = AppState::default();
-
         Self {
             io_tx,
-            actions,
-            is_loading,
-            state,
+            actions: Actions::from_iter([Action::Quit]),
+            is_loading: false,
+            state: AppState::default(),
         }
     }
 
@@ -47,13 +58,38 @@ impl App {
             debug!("Run action [{:?}]", action);
             match action {
                 Action::Quit => AppReturn::Exit,
-                Action::Sleep => {
-                    if let Some(duration) = self.state.duration().cloned() {
-                        // Sleep is an I/O action, we dispatch on the IO channel that's run on another thread
-                        self.dispatch(IoEvent::Sleep(duration)).await
+                Action::DeleteSelectedEntries => {
+                    let state = self.state();
+                    let entries_to_delete = state.selected_entries_idx
+                        .iter()
+                        .map(|idx| state.entries.items()[*idx].0.clone())
+                        .collect::<Vec<_>>();
+                    // Delete is an I/O action, we dispatch on the IO channel that's run on another thread
+                    self.dispatch(IoEvent::DeleteEntries(entries_to_delete)).await;
+                    AppReturn::Continue
+                },
+                Action::ToggleCurrent => {
+                    let state = self.state_mut();
+                    let current_idx = state.entries.state().selected();
+                    if let Some(idx) = current_idx {
+                        if state.selected_entries_idx.contains(&idx) {
+                            state.selected_entries_idx.remove(&idx);
+                        } else {
+                            state.selected_entries_idx.insert(idx);
+                        }
                     }
                     AppReturn::Continue
-                }
+                },
+                Action::Up => {
+                    let state = self.state_mut();
+                    state.entries.previous();
+                    AppReturn::Continue
+                },
+                Action::Down => {
+                    let state = self.state_mut();
+                    state.entries.next();
+                    AppReturn::Continue
+                },
             }
         } else {
             warn!("No action accociated to {}", key);
@@ -61,10 +97,21 @@ impl App {
         }
     }
 
-    pub fn initialized(&mut self) {
-        // Update contextual actions
-        self.actions = Actions::from_iter([Action::Quit, Action::Sleep]);
-        self.state = AppState::initialized()
+    pub fn initialize_from_args(&mut self, args: &Arguments) {
+        self.actions = Actions::from_iter([Action::Quit, Action::DeleteSelectedEntries, Action::ToggleCurrent, Action::Up, Action::Down]);
+        self.state.path = args.root_path.clone();
+        self.scan_dir_update();
+
+    }
+
+    pub fn scan_dir_update(&mut self) {
+        let state = self.state_mut();
+        state.entries.set_items(get_dir_list_from_path(&state.path, &is_node_modules).map(|e| {
+            let (_, size) = count_and_size(e.path());
+            (e, size)
+        }
+        ).collect::<Vec<_>>());
+        state.selected_entries_idx.clear();
     }
 
     /// We could update the app or dispatch event on tick
@@ -75,7 +122,7 @@ impl App {
     }
 
     /// Send a network event to the IO thread
-    pub async fn dispatch(&mut self, action: IoEvent) {
+    pub async fn dispatch<'a>(&mut self, action: IoEvent) {
         // `is_loading` will be set to false again after the async action has finished in io/handler.rs
         self.is_loading = true;
         if let Err(e) = self.io_tx.send(action).await {
@@ -91,6 +138,10 @@ impl App {
         &self.state
     }
 
+    pub fn state_mut(&mut self) -> &mut AppState {
+        &mut self.state
+    }
+
     pub fn is_loading(&self) -> bool {
         self.is_loading
     }
@@ -99,7 +150,4 @@ impl App {
         self.is_loading = false;
     }
 
-    pub fn sleeped(&mut self) {
-        self.state.incr_sleep();
-    }
 }

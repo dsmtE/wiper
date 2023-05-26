@@ -7,18 +7,9 @@ pub struct StatefulList<T> {
 }
 
 impl<T> StatefulList<T> {
-    pub fn from_items(items: Vec<T>) -> StatefulList<T> {
-        let mut state = ListState::default();
-        state.select(Some(0));
-        StatefulList {
-            state,
-            items,
-        }
-    }
-
     pub fn set_items(&mut self, items: Vec<T>) {
+        self.state.select((!items.is_empty()).then_some(0));
         self.items = items;
-        self.state = ListState::default();
     }
 
     pub fn items(&self) -> &Vec<T> {
@@ -69,6 +60,9 @@ impl<T> StatefulList<T> {
 
 impl<T> Default for StatefulList<T> {
     fn default() -> Self {
-        Self::from_items(Vec::new())
+        Self {
+            state: ListState::default(),
+            items: Vec::new(),
+        }
     }
 }
