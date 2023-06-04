@@ -1,7 +1,7 @@
 use tui::backend::Backend;
 use tui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Style};
-use tui::text::Span;
+use tui::text::{Span, Spans};
 use tui::widgets::{Block, BorderType, Borders, Cell, Paragraph, Row, Table, List, ListItem, ListState};
 use tui::Frame;
 
@@ -33,7 +33,7 @@ where
 
     let content_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(4), Constraint::Min(10)])
+        .constraints([Constraint::Length(6), Constraint::Min(10)])
         .split(body_chunks[0]);
 
     let help = draw_help(app.actions());
@@ -76,7 +76,33 @@ fn app_infos<'a>(loading: bool, state: &AppState) -> Paragraph<'a> {
     let paragraph = if loading {
         Paragraph::new("Loading...")
     } else {
-        Paragraph::new(format!("Path: {}", state.path.canonicalize().unwrap().display()))
+
+        let total_space =
+            state
+                .entries_size
+                .iter()
+                .sum::<u64>();
+
+        let total_selected_space =
+            state
+                .selected_entries_idx
+                .iter()
+                .map(|idx| state.entries_size[*idx])
+                .sum::<u64>();
+        
+        Paragraph::new(vec![
+            Spans::from(Span::raw(format!("Path: {}", state.path.canonicalize().unwrap().display()))),
+            Spans::from(Span::raw(format!("Regex filter: {}", state.regex_filter))),
+            Spans::from(Span::raw(format!(
+                "Total space: {:.2}MB",
+                total_space as f32 / 1000000.0
+            ))),
+            Spans::from(Span::raw(format!(
+                "Total selected space: {:.2}MB ({:.2}%)",
+                total_selected_space as f32 / 1000000.0,
+                total_selected_space as f32 / total_space as f32 * 100.0
+            ))),
+        ])
     };
 
     paragraph.style(Style::default().fg(Color::LightCyan))
