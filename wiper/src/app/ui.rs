@@ -1,7 +1,7 @@
 use tui::backend::Backend;
 use tui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Style};
-use tui::text::{Span, Spans};
+use tui::text::Span;
 use tui::widgets::{Block, BorderType, Borders, Cell, Paragraph, Row, Table, List, ListItem, ListState};
 use tui::Frame;
 
@@ -89,12 +89,12 @@ fn app_infos<'a>(loading: bool, state: &AppState) -> Paragraph<'a> {
     )
 }
 
-fn format_item(item: &(walkdir::DirEntry, u64)) -> String {
+fn format_item(item: (&walkdir::DirEntry, u64)) -> String {
     let (entry, size) = item;
     format!(
         "path : {}, size: {:.2}MB",
         entry.path().display(),
-        *size as f32 / 1000000.0
+        size as f32 / 1000000.0
     )
 }
 fn content<'a>(state: &mut AppState) -> (List<'a>, &mut ListState) {
@@ -102,6 +102,8 @@ fn content<'a>(state: &mut AppState) -> (List<'a>, &mut ListState) {
         state.entries
             .items()
             .iter()
+            .enumerate()
+            .map(|(idx, e)| (e, state.entries_size[idx]))
             .map(format_item)
             .map(ListItem::new)
             .enumerate()

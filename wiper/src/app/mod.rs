@@ -35,7 +35,8 @@ pub enum AppReturn {
 #[derive(Clone)]
 pub struct AppState {
     pub path: PathBuf,
-    pub entries: StatefulList<(walkdir::DirEntry, u64)>,
+    pub entries: StatefulList<walkdir::DirEntry>,
+    pub entries_size: Vec<u64>,
     pub selected_entries_idx: HashSet<usize>,
 }
 
@@ -44,6 +45,7 @@ impl Default for AppState {
         Self {
             path: PathBuf::from("."),
             entries: StatefulList::default(),
+            entries_size: vec![],
             selected_entries_idx: HashSet::new(),
         }
     }
@@ -80,7 +82,7 @@ impl App {
                     let state = self.state();
                     let entries_to_delete = state.selected_entries_idx
                         .iter()
-                        .map(|idx| state.entries.items()[*idx].0.clone())
+                        .map(|idx| state.entries.items()[*idx].clone())
                         .collect::<Vec<_>>();
                     // Delete is an I/O action, we dispatch on the IO channel that's run on another thread
                     self.dispatch(IoEvent::DeleteEntries(entries_to_delete)).await;
@@ -126,11 +128,14 @@ impl App {
 
     pub fn scan_dir_update(&mut self) {
         let state = self.state_mut();
-        state.entries.set_items(get_dir_list_from_path(&state.path, &is_node_modules).map(|e| {
-            let (_, size) = count_and_size(e.path());
-            (e, size)
-        }
-        ).collect::<Vec<_>>());
+        state.entries.set_items(get_dir_list_from_path(&state.path, &is_node_modules)
+        .collect::<Vec<_>>());
+
+        state.entries_size = state.entries.items()
+            .iter()
+            .map(|entry| count_and_size(entry.path()).1)
+            .collect::<Vec<_>>();
+
         state.selected_entries_idx.clear();
     }
 
