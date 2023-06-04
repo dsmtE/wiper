@@ -147,6 +147,14 @@ impl App {
             .map(|entry| count_and_size(entry.path()).1)
             .collect::<Vec<_>>();
 
+        // compute permutation sorted by size
+        let mut permutation = (0..entries_size.len()).collect::<Vec<usize>>();
+        permutation.sort_by(|a, b| entries_size[*b].cmp(&entries_size[*a]));
+
+        // apply permutation
+        dir_entries = permutation.iter().map(|&idx| dir_entries[idx].clone()).collect();
+        entries_size = permutation.iter().map(|&idx| entries_size[idx]).collect();
+
         state.entries.set_items(dir_entries);
         state.entries_size = entries_size;
         state.selected_entries_idx.clear();
