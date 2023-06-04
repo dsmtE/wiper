@@ -1,5 +1,6 @@
 use log::{debug, error, warn};
 use std::collections::HashSet;
+use std::path::PathBuf;
 use crate::utils::statefull_list::StatefulList;
 
 use self::actions::Actions;
@@ -14,8 +15,8 @@ pub mod ui;
 #[derive(clap::Parser, Clone, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Arguments {
-    #[arg(help("root Path to search"), default_value_t = (".").to_string())]
-    pub root_path: String,
+    #[arg(help("root Path to search"), value_hint = clap::ValueHint::DirPath)]
+    pub root_path: Option<PathBuf>,
     #[arg(
         short,
         long,
@@ -33,7 +34,7 @@ pub enum AppReturn {
 
 #[derive(Clone)]
 pub struct AppState {
-    pub path: String,
+    pub path: PathBuf,
     pub entries: StatefulList<(walkdir::DirEntry, u64)>,
     pub selected_entries_idx: HashSet<usize>,
 }
@@ -41,7 +42,7 @@ pub struct AppState {
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            path: String::new(),
+            path: PathBuf::from("."),
             entries: StatefulList::default(),
             selected_entries_idx: HashSet::new(),
         }
@@ -116,7 +117,9 @@ impl App {
 
     pub fn initialize_from_args(&mut self, args: &Arguments) {
         self.actions = Actions::from_iter([Action::Quit, Action::DeleteSelectedEntries, Action::ToggleCurrent, Action::Up, Action::Down]);
-        self.state.path = args.root_path.clone();
+        if let Some(root_path) = &args.root_path {
+            self.state.path = root_path.clone();
+        }
         self.scan_dir_update();
 
     }

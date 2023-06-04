@@ -76,7 +76,7 @@ fn app_infos<'a>(loading: bool, state: &AppState) -> Paragraph<'a> {
     let paragraph = if loading {
         Paragraph::new("Loading...")
     } else {
-        Paragraph::new(format!("Path: {}", state.path))
+        Paragraph::new(format!("Path: {}", state.path.canonicalize().unwrap().display()))
     };
 
     paragraph.style(Style::default().fg(Color::LightCyan))
@@ -93,7 +93,7 @@ fn format_item(item: &(walkdir::DirEntry, u64)) -> String {
     let (entry, size) = item;
     format!(
         "path : {}, size: {:.2}MB",
-        entry.path().canonicalize().unwrap().to_str().unwrap(),
+        entry.path().display(),
         *size as f32 / 1000000.0
     )
 }

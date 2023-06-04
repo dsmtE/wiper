@@ -36,12 +36,13 @@ where
     })
 }
 
-pub fn get_dir_list_from_path<'a, P>(
-    path: &str,
-    filter_filename_predicate: &'a P,
+pub fn get_dir_list_from_path<'a, P, F>(
+    path: &P,
+    filter_filename_predicate: &'a F,
 ) -> impl Iterator<Item = walkdir::DirEntry> + 'a
 where
-    P: Fn(&OsStr) -> bool,
+    P: AsRef<std::path::Path>,
+    F: Fn(&OsStr) -> bool,
 {
     WalkDir::new(path)
         .follow_links(true)
