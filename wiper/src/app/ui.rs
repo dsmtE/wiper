@@ -98,14 +98,22 @@ fn format_item(item: &(walkdir::DirEntry, u64)) -> String {
     )
 }
 fn content<'a>(state: &mut AppState) -> (List<'a>, &mut ListState) {
-    (List::new(state.entries.items().iter().map(format_item).map(ListItem::new).enumerate().map(|(idx, item)| {
-        if state.selected_entries_idx.contains(&idx) {
-            // orange
-            item.style(Style::default().fg(Color::Rgb(255, 165, 0)))
-        } else {
-            item
-        }
-    }).collect::<Vec<_>>())
+    (List::new(
+        state.entries
+            .items()
+            .iter()
+            .map(format_item)
+            .map(ListItem::new)
+            .enumerate()
+            .map(|(idx, item)| {
+                if state.selected_entries_idx.contains(&idx) {
+                    // orange
+                    item.style(Style::default().fg(Color::Rgb(255, 165, 0)))
+                } else {
+                    item
+                }
+            })
+            .collect::<Vec<_>>())
         .block(
             Block::default()
                 .borders(Borders::ALL)
