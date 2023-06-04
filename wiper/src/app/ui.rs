@@ -5,8 +5,8 @@ use tui::text::{Span, Spans};
 use tui::widgets::{Block, BorderType, Borders, Cell, Paragraph, Row, Table, List, ListItem, ListState};
 use tui::Frame;
 
-use super::{actions::Actions, state::AppState};
-use crate::app::App;
+use super::actions::Actions;
+use crate::app::{App, AppState};
 
 pub fn draw<B>(rect: &mut Frame<B>, app: &mut App)
 where
@@ -76,12 +76,7 @@ fn app_infos<'a>(loading: bool, state: &AppState) -> Paragraph<'a> {
     let paragraph = if loading {
         Paragraph::new("Loading...")
     } else {
-
-        let tick_text = format!("Tick count: {}", state.counter_tick);
-    
-        Paragraph::new(vec![
-            Spans::from(Span::raw(tick_text)),
-        ])
+        Paragraph::new(format!("Path: {}", state.path))
     };
 
     paragraph.style(Style::default().fg(Color::LightCyan))

@@ -1,14 +1,14 @@
 use log::{debug, error, warn};
+use std::collections::HashSet;
+use crate::utils::statefull_list::StatefulList;
 
 use self::actions::Actions;
-use self::state::AppState;
 use crate::app::actions::Action;
 use crate::inputs::key::Key;
 use crate::io::IoEvent;
 use crate::utils::walker::{get_dir_list_from_path, is_node_modules, count_and_size};
 
 pub mod actions;
-pub mod state;
 pub mod ui;
 
 #[derive(clap::Parser, Clone, Debug)]
@@ -29,6 +29,23 @@ pub struct Arguments {
 pub enum AppReturn {
     Exit,
     Continue,
+}
+
+#[derive(Clone)]
+pub struct AppState {
+    pub path: String,
+    pub entries: StatefulList<(walkdir::DirEntry, u64)>,
+    pub selected_entries_idx: HashSet<usize>,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            path: String::new(),
+            entries: StatefulList::default(),
+            selected_entries_idx: HashSet::new(),
+        }
+    }
 }
 
 /// The main application, containing the state
@@ -116,8 +133,6 @@ impl App {
 
     /// We could update the app or dispatch event on tick
     pub async fn update_on_tick(&mut self) -> AppReturn {
-        // here we just increment a counter
-        self.state.incr_tick();
         AppReturn::Continue
     }
 
