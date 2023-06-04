@@ -7,7 +7,7 @@ use self::actions::Actions;
 use crate::app::actions::Action;
 use crate::inputs::key::Key;
 use crate::io::IoEvent;
-use crate::utils::walker::{get_dir_list_from_path, is_node_modules, count_and_size};
+use crate::utils::walker::{get_dir_list_from_path, count_and_size};
 
 pub mod actions;
 pub mod ui;
@@ -17,6 +17,8 @@ pub mod ui;
 pub struct Arguments {
     #[arg(help("root Path to search"), value_hint = clap::ValueHint::DirPath)]
     pub root_path: Option<PathBuf>,
+    #[arg(help("regex filter"), long, default_value = "node_modules")]
+    pub regex_filter: String,
     #[arg(
         short,
         long,
@@ -35,6 +37,7 @@ pub enum AppReturn {
 #[derive(Clone)]
 pub struct AppState {
     pub path: PathBuf,
+    pub regex_filter: String,
     pub entries: StatefulList<walkdir::DirEntry>,
     pub entries_size: Vec<u64>,
     pub selected_entries_idx: HashSet<usize>,
@@ -44,6 +47,7 @@ impl Default for AppState {
     fn default() -> Self {
         Self {
             path: PathBuf::from("."),
+            regex_filter: String::default(),
             entries: StatefulList::default(),
             entries_size: vec![],
             selected_entries_idx: HashSet::new(),
@@ -122,20 +126,29 @@ impl App {
         if let Some(root_path) = &args.root_path {
             self.state.path = root_path.clone();
         }
+        self.state.regex_filter = args.regex_filter.clone();
         self.scan_dir_update();
-
     }
 
     pub fn scan_dir_update(&mut self) {
         let state = self.state_mut();
-        state.entries.set_items(get_dir_list_from_path(&state.path, &is_node_modules)
-        .collect::<Vec<_>>());
+        let regex_fiter = regex::Regex::new(&state.regex_filter).unwrap();
 
-        state.entries_size = state.entries.items()
+        let mut dir_entries = get_dir_list_from_path(
+            &state.path,
+            &|entry| {
+                regex_fiter.is_match(entry.to_str().unwrap())
+            }
+            )
+        .collect::<Vec<_>>();
+
+        let mut entries_size = dir_entries
             .iter()
             .map(|entry| count_and_size(entry.path()).1)
             .collect::<Vec<_>>();
 
+        state.entries.set_items(dir_entries);
+        state.entries_size = entries_size;
         state.selected_entries_idx.clear();
     }
 

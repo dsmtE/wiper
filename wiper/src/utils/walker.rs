@@ -13,10 +13,6 @@ pub fn count_and_size(path: impl AsRef<std::path::Path>) -> (usize, u64) {
         })
 }
 
-pub fn is_node_modules(file_name: &OsStr) -> bool {
-    file_name.to_string_lossy() == "node_modules"
-}
-
 pub fn is_hidden(entry: &walkdir::DirEntry) -> bool {
     entry
         .file_name()
