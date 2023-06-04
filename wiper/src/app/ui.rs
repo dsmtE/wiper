@@ -65,7 +65,7 @@ fn check_size(rect: &Rect) -> Result<(), String> {
     if rect.width < 52 {
         return Err(format!("Require width >= 52, (got {})", rect.width));
     }
-    if rect.height < 28 {
+    if rect.height < 12 {
         return Err(format!("Require height >= 28, (got {})", rect.height));
     }
 
