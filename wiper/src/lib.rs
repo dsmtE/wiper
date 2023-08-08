@@ -5,7 +5,6 @@ use std::{
 
 use eyre::{Result, Context};
 
-use log::{error, warn};
 use ratatui::{Terminal, backend::CrosstermBackend};
 
 use crossterm::{
