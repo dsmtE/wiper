@@ -10,12 +10,12 @@ clap = {version = "4.*", features = ["derive"]}
 log = "0.4"
 eyre = "0.6"
 tui = { version = "0.19.0", features = ['crossterm', 'serde'] }
-crossterm = "0.26.1"
+crossterm = "0.27"
 
 tokio = { version = "1", features = ["full"] }
 
-strum = "0.24"
-strum_macros = "0.24"
+strum = "0.25"
+strum_macros = "0.25"
 
 walkdir = "2.3.3"
 regex = "1.7"
