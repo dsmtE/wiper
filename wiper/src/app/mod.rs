@@ -84,53 +84,60 @@ impl App {
     }
 
     /// Handle a user action
-    pub async fn do_action(&mut self, key: Key) -> AppReturn {
-        if let Some(action) = self.actions.find(key) {
-            debug!("Run action [{:?}]", action);
-            match action {
-                Action::Quit => AppReturn::Exit,
-                Action::DeleteSelectedEntries => {
-                    let state = self.state();
-                    let entries_to_delete = state.selected_entries_idx
-                        .iter()
-                        .map(|idx| state.entries.items()[*idx].clone())
-                        .collect::<Vec<_>>();
- 
-                    if let Err(e) = delete_entries(&entries_to_delete) {
-                        warn!("Error while deleting entries: {}", e);
-                    }
+    pub async fn key_pressed(&mut self, key: Key) -> AppReturn {
+        
+        let optional_action = self.actions.find(key);
 
-                    self.scan_dir_update();
-
-                    AppReturn::Continue
-                },
-                Action::ToggleCurrent => {
-                    let state = self.state_mut();
-                    let current_idx = state.entries.state().selected();
-                    if let Some(idx) = current_idx {
-                        if state.selected_entries_idx.contains(&idx) {
-                            state.selected_entries_idx.remove(&idx);
-                        } else {
-                            state.selected_entries_idx.insert(idx);
-                        }
-                    }
-                    AppReturn::Continue
-                },
-                Action::Up => {
-                    let state = self.state_mut();
-                    state.entries.previous();
-                    AppReturn::Continue
-                },
-                Action::Down => {
-                    let state = self.state_mut();
-                    state.entries.next();
-                    AppReturn::Continue
-                },
-            }
-        } else {
-            warn!("No action accociated to {}", key);
-            AppReturn::Continue
+        if optional_action.is_none() {
+            warn!("No action associated to {}", key);
+            return AppReturn::Continue;
         }
+
+        let action = optional_action.unwrap();
+        debug!("Run action [{:?}]", action);
+
+        match action {
+            Action::DeleteSelectedEntries => {
+                let state = self.state();
+                let entries_to_delete = state.selected_entries_idx
+                    .iter()
+                    .map(|idx| state.entries.items()[*idx].clone())
+                    .collect::<Vec<_>>();
+
+                if let Err(e) = delete_entries(&entries_to_delete) {
+                    warn!("Error while deleting entries: {}", e);
+                }
+
+                self.scan_dir_update();
+            },
+            Action::ToggleCurrent => {
+                let state = self.state_mut();
+                let current_idx = state.entries.state().selected();
+                if let Some(idx) = current_idx {
+                    if state.selected_entries_idx.contains(&idx) {
+                        state.selected_entries_idx.remove(&idx);
+                    } else {
+                        state.selected_entries_idx.insert(idx);
+                    }
+                }
+            },
+            Action::Up => {
+                let state = self.state_mut();
+                state.entries.previous();
+            },
+            Action::Down => {
+                let state = self.state_mut();
+                state.entries.next();
+            },
+            Action::Quit => {
+                return AppReturn::Exit;
+            },
+        }
+        AppReturn::Continue
+    }
+
+    pub async fn key_released(&mut self, _key: Key) -> AppReturn {
+        AppReturn::Continue
     }
 
     pub fn scan_dir_update(&mut self) {

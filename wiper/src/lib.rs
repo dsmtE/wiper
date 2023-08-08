@@ -32,7 +32,10 @@ pub async fn start_ui(app: &mut App) -> Result<()> {
 
         // Handle inputs
         let result = match events.next().await {
-            InputEvent::Input(key) => app.do_action(key).await,
+            InputEvent::Pressed(key) => app.key_pressed(key).await,
+            InputEvent::Released(key) => app.key_released(key).await,
+            // TODO: Handle repeat if needed
+            InputEvent::Repeat(key) => AppReturn::Continue,
             InputEvent::Tick => app.update_on_tick().await,
         };
 

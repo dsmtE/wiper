@@ -2,7 +2,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
+use eyre::Context;
 use log::error;
+
+
+use crossterm::event;
 
 use super::key::Key;
 use super::InputEvent;
@@ -28,14 +32,16 @@ impl Events {
         tokio::spawn(async move {
             loop {
                 // poll for tick rate duration, if no event, sent tick event.
-                if crossterm::event::poll(tick_rate).unwrap() {
-                    if let crossterm::event::Event::Key(key_event) = crossterm::event::read().unwrap() {
+                if event::poll(tick_rate).context("event poll failed").unwrap() {
+                    if let event::Event::Key(key_event) = event::read().context("event read failed").unwrap() {
                         let key = Key::from(key_event);
-                        let pressed = key_event.kind == crossterm::event::KeyEventKind::Press;
-                        if !pressed {
-                            continue;
-                        }
-                        if let Err(err) = event_tx.send(InputEvent::Input(key)).await {
+                        let input_event = match key_event.kind {
+                            event::KeyEventKind::Press => InputEvent::Pressed(key),
+                            event::KeyEventKind::Release => InputEvent::Released(key),
+                            event::KeyEventKind::Repeat => InputEvent::Repeat(key),
+                        };
+
+                        if let Err(err) = event_tx.send(input_event).await {
                             error!("Oops!, {}", err);
                         }
                     }
