@@ -1,20 +1,22 @@
-use tui::backend::Backend;
-use tui::layout::{Alignment, Constraint, Direction, Layout, Rect};
-use tui::style::{Color, Style};
-use tui::text::{Span, Spans};
-use tui::widgets::{Block, BorderType, Borders, Cell, Paragraph, Row, Table, List, ListItem, ListState};
-use tui::Frame;
+use ratatui::{
+    backend::Backend,
+    layout::{Constraint, Direction, Layout, Rect, Alignment},
+    style::{Color, Style},
+    widgets::*,
+    text::{Span, Line},
+    Frame,
+};
+
+use eyre::{Result, eyre};
 
 use super::actions::Actions;
 use crate::app::{App, AppState};
 
-pub fn draw<B>(rect: &mut Frame<B>, app: &mut App)
+pub fn draw<B>(frame: &mut Frame<B>, app: &mut App)
 where
     B: Backend,
 {
-    let size = rect.size();
-    check_size(&size).unwrap();
-
+    let size = frame.size();
     // Vertical layout
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -23,7 +25,7 @@ where
 
     // Title
     let title = draw_title();
-    rect.render_widget(title, chunks[0]);
+    frame.render_widget(title, chunks[0]);
 
     // Body & Help
     let body_chunks = Layout::default()
@@ -37,13 +39,13 @@ where
         .split(body_chunks[0]);
 
     let help = draw_help(app.actions());
-    rect.render_widget(help, body_chunks[1]);
+    frame.render_widget(help, body_chunks[1]);
 
     // Content
-    rect.render_widget(app_infos(app.state()), content_chunks[0]);
+    frame.render_widget(app_infos(app.state()), content_chunks[0]);
 
     let (content_list, content_list_state) = content(app.state_mut());
-    rect.render_stateful_widget(content_list, content_chunks[1], content_list_state);
+    frame.render_stateful_widget(content_list, content_chunks[1], content_list_state);
 
 
     
@@ -61,12 +63,12 @@ fn draw_title<'a>() -> Paragraph<'a> {
         )
 }
 
-fn check_size(rect: &Rect) -> Result<(), String> {
+pub fn check_size(rect: &Rect) -> Result<()> {
     if rect.width < 52 {
-        return Err(format!("Require width >= 52, (got {})", rect.width));
+        return Err(eyre!("Require width >= 52, (got {})", rect.width));
     }
     if rect.height < 12 {
-        return Err(format!("Require height >= 28, (got {})", rect.height));
+        return Err(eyre!("Require height >= 28, (got {})", rect.height));
     }
 
     Ok(())
@@ -88,13 +90,13 @@ fn app_infos<'a>(state: &AppState) -> Paragraph<'a> {
                 .sum::<u64>();
         
         Paragraph::new(vec![
-            Spans::from(Span::raw(format!("Path: {}", state.path.canonicalize().unwrap().display()))),
-            Spans::from(Span::raw(format!("Regex filter: {}", state.regex_filter))),
-            Spans::from(Span::raw(format!(
+            Line::from(Span::raw(format!("Path: {}", state.path.canonicalize().unwrap().display()))),
+            Line::from(Span::raw(format!("Regex filter: {}", state.regex_filter))),
+            Line::from(Span::raw(format!(
                 "Total space: {:.2}MB",
                 total_space as f32 / 1000000.0
             ))),
-            Spans::from(Span::raw(format!(
+            Line::from(Span::raw(format!(
                 "Total selected space: {:.2}MB ({:.2}%)",
                 total_selected_space as f32 / 1000000.0,
                 total_selected_space as f32 / total_space as f32 * 100.0

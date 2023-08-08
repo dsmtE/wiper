@@ -1,6 +1,7 @@
 use clap::Parser;
 use eyre::Result;
-use wiper::{app::{App, Arguments}, start_ui};
+
+use wiper::{app::{App, Arguments}, start_terminal_app};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -10,7 +11,7 @@ async fn main() -> Result<()> {
     // We need to share the App between thread
     let mut app = App::new_from_args(&args);
 
-    start_ui(&mut app).await?;
+    start_terminal_app(&mut app).await?;
 
     Ok(())
 }

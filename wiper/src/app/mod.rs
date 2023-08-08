@@ -1,4 +1,4 @@
-use log::{debug, warn, info};
+use log::{debug, warn};
 use std::collections::HashSet;
 use std::path::PathBuf;
 use crate::utils::statefull_list::StatefulList;
