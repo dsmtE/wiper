@@ -1,4 +1,4 @@
-use log::{debug, error, warn};
+use log::{debug, warn, info};
 use std::collections::HashSet;
 use std::path::PathBuf;
 use crate::utils::statefull_list::StatefulList;
@@ -6,8 +6,7 @@ use crate::utils::statefull_list::StatefulList;
 use self::actions::Actions;
 use crate::app::actions::Action;
 use crate::inputs::key::Key;
-use crate::io::IoEvent;
-use crate::utils::walker::{get_dir_list_from_path, count_and_size};
+use crate::utils::walker::{get_dir_list_from_path, count_and_size, delete_entries};
 
 pub mod actions;
 pub mod ui;
@@ -57,23 +56,31 @@ impl Default for AppState {
 
 /// The main application, containing the state
 pub struct App {
-    /// We could dispatch an IO event
-    io_tx: tokio::sync::mpsc::Sender<IoEvent>,
     /// Contextual actions
     actions: Actions,
-    /// State
-    is_loading: bool,
     state: AppState,
 }
 
 impl App {
-    pub fn new(io_tx: tokio::sync::mpsc::Sender<IoEvent>) -> Self {
-        Self {
-            io_tx,
-            actions: Actions::from_iter([Action::Quit]),
-            is_loading: false,
-            state: AppState::default(),
-        }
+    pub fn new_from_args(args: &Arguments) -> Self {
+        let mut app = Self {
+            actions: Actions::from_iter([
+                Action::Quit,
+                Action::DeleteSelectedEntries,
+                Action::ToggleCurrent,
+                Action::Up,
+                Action::Down
+                ]),
+            state: AppState {
+                path: args.root_path.clone().unwrap_or_else(|| PathBuf::from(".")),
+                regex_filter: args.regex_filter.clone(),
+                ..Default::default()
+            },
+        };
+
+        app.scan_dir_update();
+
+        app
     }
 
     /// Handle a user action
@@ -88,8 +95,13 @@ impl App {
                         .iter()
                         .map(|idx| state.entries.items()[*idx].clone())
                         .collect::<Vec<_>>();
-                    // Delete is an I/O action, we dispatch on the IO channel that's run on another thread
-                    self.dispatch(IoEvent::DeleteEntries(entries_to_delete)).await;
+ 
+                    if let Err(e) = delete_entries(&entries_to_delete) {
+                        warn!("Error while deleting entries: {}", e);
+                    }
+
+                    self.scan_dir_update();
+
                     AppReturn::Continue
                 },
                 Action::ToggleCurrent => {
@@ -119,15 +131,6 @@ impl App {
             warn!("No action accociated to {}", key);
             AppReturn::Continue
         }
-    }
-
-    pub fn initialize_from_args(&mut self, args: &Arguments) {
-        self.actions = Actions::from_iter([Action::Quit, Action::DeleteSelectedEntries, Action::ToggleCurrent, Action::Up, Action::Down]);
-        if let Some(root_path) = &args.root_path {
-            self.state.path = root_path.clone();
-        }
-        self.state.regex_filter = args.regex_filter.clone();
-        self.scan_dir_update();
     }
 
     pub fn scan_dir_update(&mut self) {
@@ -165,16 +168,6 @@ impl App {
         AppReturn::Continue
     }
 
-    /// Send a network event to the IO thread
-    pub async fn dispatch<'a>(&mut self, action: IoEvent) {
-        // `is_loading` will be set to false again after the async action has finished in io/handler.rs
-        self.is_loading = true;
-        if let Err(e) = self.io_tx.send(action).await {
-            self.is_loading = false;
-            error!("Error from dispatch {}", e);
-        };
-    }
-
     pub fn actions(&self) -> &Actions {
         &self.actions
     }
@@ -184,14 +177,6 @@ impl App {
 
     pub fn state_mut(&mut self) -> &mut AppState {
         &mut self.state
-    }
-
-    pub fn is_loading(&self) -> bool {
-        self.is_loading
-    }
-
-    pub fn loaded(&mut self) {
-        self.is_loading = false;
     }
 
 }

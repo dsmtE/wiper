@@ -40,7 +40,7 @@ where
     rect.render_widget(help, body_chunks[1]);
 
     // Content
-    rect.render_widget(app_infos(app.is_loading(), app.state()), content_chunks[0]);
+    rect.render_widget(app_infos(app.state()), content_chunks[0]);
 
     let (content_list, content_list_state) = content(app.state_mut());
     rect.render_stateful_widget(content_list, content_chunks[1], content_list_state);
@@ -72,11 +72,8 @@ fn check_size(rect: &Rect) -> Result<(), String> {
     Ok(())
 }
 
-fn app_infos<'a>(loading: bool, state: &AppState) -> Paragraph<'a> {
-    let paragraph = if loading {
-        Paragraph::new("Loading...")
-    } else {
-
+fn app_infos<'a>(state: &AppState) -> Paragraph<'a> {
+    let paragraph = {
         let total_space =
             state
                 .entries_size
