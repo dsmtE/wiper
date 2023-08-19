@@ -61,7 +61,7 @@ fn vec_to_string<T: std::fmt::Display>(vec: &[T], separator: &'static str) -> St
         .unwrap()
 }
 
-fn check_unicity(actions: &[Action]) -> Result<(), String> {
+fn check_action_conflicts(actions: &[Action]) -> Result<(), String> {
     let mut map = std::collections::HashMap::new();
 
     for action in actions {
@@ -91,8 +91,8 @@ fn check_unicity(actions: &[Action]) -> Result<(), String> {
 impl FromIterator<Action> for Actions {
     fn from_iter<T: IntoIterator<Item = Action>>(iter: T) -> Self {
         let actions = iter.into_iter().collect::<Vec<_>>();
-        check_unicity(&actions)
-            .map_err(|e| format!("Invalid action unicity{}", e))
+        check_action_conflicts(&actions)
+            .map_err(|e|  format!("Error while creating actions: {}", e))
             .unwrap();
         Self(actions)
     }
