@@ -16,7 +16,7 @@ pub mod ui;
 pub struct Arguments {
     #[arg(help("root Path to search"), value_hint = clap::ValueHint::DirPath)]
     pub root_path: Option<PathBuf>,
-    #[arg(help("regex filter"), long, default_value = "node_modules")]
+    #[arg(help("regex filter"), long, default_value = "^node_modules$")]
     pub regex_filter: String,
     #[arg(
         short,
