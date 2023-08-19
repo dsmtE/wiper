@@ -51,12 +51,6 @@ where
 
 
 pub fn delete_entries(entries: &[walkdir::DirEntry]) -> Result<(), std::io::Error> {
-    // for entry in entries {
-    //     if entry.file_type().is_dir() {
-    //         std::fs::remove_dir_all(entry.path())?;
-    //     } else {
-    //         std::fs::remove_file(entry.path())?;
-    //     }
-    // }
+    trash::delete_all(entries.iter().map(|entry| entry.path())).unwrap();
     Ok(())
 }

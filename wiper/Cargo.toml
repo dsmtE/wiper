@@ -17,6 +17,7 @@ strum_macros = "0.25"
 
 walkdir = "2.3.3"
 regex = "1.7"
+trash = "3.0.6"
 
 [profile.dev.package."*"]
 opt-level = 3
