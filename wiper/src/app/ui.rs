@@ -30,7 +30,7 @@ where
     // Body & Help
     let body_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Min(20), Constraint::Length(32)])
+        .constraints([Constraint::Min(20), Constraint::Length(34)])
         .split(chunks[1]);
 
     let content_chunks = Layout::default()
@@ -46,9 +46,6 @@ where
 
     let (content_list, content_list_state) = content(app.state_mut());
     frame.render_stateful_widget(content_list, content_chunks[1], content_list_state);
-
-
-    
 }
 
 fn draw_title<'a>() -> Paragraph<'a> {
