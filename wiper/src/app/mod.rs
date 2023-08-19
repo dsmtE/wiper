@@ -84,7 +84,7 @@ impl App {
     }
 
     /// Handle a user action
-    pub async fn key_pressed(&mut self, key: Key) -> AppReturn {
+    pub fn key_pressed(&mut self, key: Key) -> AppReturn {
         
         let optional_action = self.actions.find(key);
 
@@ -136,7 +136,7 @@ impl App {
         AppReturn::Continue
     }
 
-    pub async fn key_released(&mut self, _key: Key) -> AppReturn {
+    pub fn key_released(&mut self, _key: Key) -> AppReturn {
         AppReturn::Continue
     }
 
@@ -168,11 +168,6 @@ impl App {
         state.entries.set_items(dir_entries);
         state.entries_size = entries_size;
         state.selected_entries_idx.clear();
-    }
-
-    /// We could update the app or dispatch event on tick
-    pub async fn update_on_tick(&mut self) -> AppReturn {
-        AppReturn::Continue
     }
 
     pub fn actions(&self) -> &Actions {

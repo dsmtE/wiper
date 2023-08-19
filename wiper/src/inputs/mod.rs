@@ -1,6 +1,5 @@
 use self::key::Key;
 
-pub mod events;
 pub mod key;
 
 pub enum InputEvent {
@@ -8,6 +7,4 @@ pub enum InputEvent {
     Pressed(Key),
     Released(Key),
     Repeat(Key),
-    /// An tick event occurred.
-    Tick,
 }

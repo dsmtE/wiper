@@ -8,14 +8,14 @@ use eyre::{Result, Context};
 use ratatui::{Terminal, backend::CrosstermBackend};
 
 use crossterm::{
+    event,
     execute,
     terminal,
 };
 
 use app::{App, AppReturn};
 
-use inputs::events::Events;
-use inputs::InputEvent;
+use inputs::{InputEvent, key::Key};
 
 use crate::app::ui;
 
@@ -23,13 +23,10 @@ pub mod app;
 pub mod inputs;
 pub mod utils;
 
-pub async fn start_terminal_app(app: &mut App) -> Result<()> {
+pub fn start_terminal_app(app: &mut App) -> Result<()> {
     let mut terminal = setup_terminal()?;
 
-    // User event handler
-    let mut events = Events::new(Duration::from_millis(200));
-
-    let loop_error_report = run_loop(app, &mut events, &mut terminal).await;
+    let loop_error_report = run_loop(app, &mut terminal);
 
     restore_terminal(&mut terminal)?;
 
@@ -40,28 +37,27 @@ pub async fn start_terminal_app(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-async fn run_loop(app: &mut App, events: &mut Events, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
-    Ok(loop {
+fn run_loop(app: &mut App, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+    loop {
         // Check if the terminal is big enough
         ui::check_size(&terminal.get_frame().size()).context("Unable to continue, the terminal is too small.")?;
 
         terminal.draw(|frame| ui::draw(frame, app))?;
         
-        // Handle inputs
-        let result = match events.next().await {
-            InputEvent::Pressed(key) => app.key_pressed(key).await,
-            InputEvent::Released(key) => app.key_released(key).await,
-            // TODO: Handle repeat if needed
-            InputEvent::Repeat(_key) => AppReturn::Continue,
-            InputEvent::Tick => app.update_on_tick().await,
-        };
+        for input_event in get_input_events(Duration::from_millis(200)) {
+            let result = match input_event {
+                InputEvent::Pressed(key) => app.key_pressed(key),
+                InputEvent::Released(key) => app.key_released(key),
+                // TODO: Handle repeat if needed
+                InputEvent::Repeat(_key) => AppReturn::Continue,
+            };
 
-        // Check if we should exit
-        if result == AppReturn::Exit {
-            events.close();
-            break;
+            // Check if we should exit
+            if result == AppReturn::Exit {
+                return Ok(());
+            }
         }
-    })
+    }
 }
 
 
@@ -83,4 +79,23 @@ fn restore_terminal(
     execute!(terminal.backend_mut(), terminal::LeaveAlternateScreen)?;
     terminal.show_cursor()?;
     Ok(())
+}
+
+pub fn get_input_events(tick_rate: Duration) -> Vec<InputEvent> {
+    let mut input_events: Vec<InputEvent> = Vec::new();
+
+    while event::poll(tick_rate).context("event poll failed").unwrap()  {
+        
+        if let event::Event::Key(key_event) = event::read().context("event read failed").unwrap() {
+            let key = Key::from(key_event);
+            let input_event = match key_event.kind {
+                event::KeyEventKind::Press => InputEvent::Pressed(key),
+                event::KeyEventKind::Release => InputEvent::Released(key),
+                event::KeyEventKind::Repeat => InputEvent::Repeat(key),
+            };
+            input_events.push(input_event);
+        }
+    }
+
+    input_events
 }
