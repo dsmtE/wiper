@@ -1,11 +1,11 @@
 use log::{debug, warn};
 use std::collections::HashSet;
 use std::path::PathBuf;
-use crate::utils::statefull_list::StatefulList;
+use crate::utils::{statefull_list::StatefulList, key_display::KeyEventWrapper};
 
 use self::actions::Actions;
 use crate::app::actions::Action;
-use crate::inputs::key::Key;
+use crossterm::event::KeyEvent;
 use crate::utils::walker::{get_dir_list_from_path, count_and_size, delete_entries};
 
 pub mod actions;
@@ -69,8 +69,8 @@ impl App {
                 Action::DeleteSelectedEntries,
                 Action::ToggleCurrent,
                 Action::Up,
-                Action::Down
-                ]),
+                Action::Down,
+            ]),
             state: AppState {
                 path: args.root_path.clone().unwrap_or_else(|| PathBuf::from(".")),
                 regex_filter: args.regex_filter.clone(),
@@ -82,14 +82,17 @@ impl App {
 
         app
     }
-
     /// Handle a user action
-    pub fn key_pressed(&mut self, key: Key) -> AppReturn {
-        
-        let optional_action = self.actions.find(key);
+    pub fn key_event(&mut self, key_event: KeyEvent) -> AppReturn {
+        if key_event.kind != crossterm::event::KeyEventKind::Press {
+            warn!("Key event is not a press event");
+            return AppReturn::Continue;
+        }
+
+        let optional_action = self.actions.find(key_event);
 
         if optional_action.is_none() {
-            warn!("No action associated to {}", key);
+            warn!("No action associated to {}", KeyEventWrapper(&key_event));
             return AppReturn::Continue;
         }
 
@@ -133,10 +136,6 @@ impl App {
                 return AppReturn::Exit;
             },
         }
-        AppReturn::Continue
-    }
-
-    pub fn key_released(&mut self, _key: Key) -> AppReturn {
         AppReturn::Continue
     }
 

@@ -10,7 +10,7 @@ use ratatui::{
 use eyre::{Result, eyre};
 
 use super::actions::Actions;
-use crate::app::{App, AppState};
+use crate::{app::{App, AppState}, utils::key_display::KeyEventWrapper};
 
 pub fn draw<B>(frame: &mut Frame<B>, app: &mut App)
 where
@@ -167,7 +167,7 @@ fn draw_help(actions: &Actions) -> Table {
                 String::from("")
             };
             let row = Row::new(vec![
-                Cell::from(Span::styled(key.to_string(), key_style)),
+                Cell::from(Span::styled(KeyEventWrapper(&key).to_string(), key_style)),
                 Cell::from(Span::styled(help, help_style)),
             ]);
             rows.push(row);

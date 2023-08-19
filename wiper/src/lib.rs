@@ -8,19 +8,16 @@ use eyre::{Result, Context};
 use ratatui::{Terminal, backend::CrosstermBackend};
 
 use crossterm::{
-    event,
+    event::{self, KeyEvent},
     execute,
     terminal,
 };
 
 use app::{App, AppReturn};
 
-use inputs::{InputEvent, key::Key};
-
 use crate::app::ui;
 
 pub mod app;
-pub mod inputs;
 pub mod utils;
 
 pub fn start_terminal_app(app: &mut App) -> Result<()> {
@@ -44,16 +41,9 @@ fn run_loop(app: &mut App, terminal: &mut Terminal<CrosstermBackend<Stdout>>) ->
 
         terminal.draw(|frame| ui::draw(frame, app))?;
         
-        for input_event in get_input_events(Duration::from_millis(200)) {
-            let result = match input_event {
-                InputEvent::Pressed(key) => app.key_pressed(key),
-                InputEvent::Released(key) => app.key_released(key),
-                // TODO: Handle repeat if needed
-                InputEvent::Repeat(_key) => AppReturn::Continue,
-            };
-
+        for key_event in get_key_input_events(Duration::from_millis(200)) {
             // Check if we should exit
-            if result == AppReturn::Exit {
+            if app.key_event(key_event) == AppReturn::Exit {
                 return Ok(());
             }
         }
@@ -81,19 +71,12 @@ fn restore_terminal(
     Ok(())
 }
 
-pub fn get_input_events(tick_rate: Duration) -> Vec<InputEvent> {
-    let mut input_events: Vec<InputEvent> = Vec::new();
+pub fn get_key_input_events(tick_rate: Duration) -> Vec<KeyEvent> {
+    let mut input_events: Vec<KeyEvent> = Vec::new();
 
     while event::poll(tick_rate).context("event poll failed").unwrap()  {
-        
         if let event::Event::Key(key_event) = event::read().context("event read failed").unwrap() {
-            let key = Key::from(key_event);
-            let input_event = match key_event.kind {
-                event::KeyEventKind::Press => InputEvent::Pressed(key),
-                event::KeyEventKind::Release => InputEvent::Released(key),
-                event::KeyEventKind::Repeat => InputEvent::Repeat(key),
-            };
-            input_events.push(input_event);
+            input_events.push(key_event);
         }
     }
 
