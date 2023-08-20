@@ -93,12 +93,12 @@ fn app_infos<'a>(state: &AppState) -> Paragraph<'a> {
     )
 }
 
-fn format_item(item: (&walkdir::DirEntry, u64)) -> String {
+fn format_item(item: (&walkdir::DirEntry, &u64)) -> String {
     let (entry, size) = item;
     format!(
         "path : {}, size: {:.2}MB",
         entry.path().display(),
-        size as f32 / 1000000.0
+        *size as f32 / 1000000.0
     )
 }
 fn content<'a>(state: &mut AppState) -> (List<'a>, &mut ListState) {
@@ -106,8 +106,7 @@ fn content<'a>(state: &mut AppState) -> (List<'a>, &mut ListState) {
         state.entries
             .items
             .iter()
-            .enumerate()
-            .map(|(idx, e)| (e, state.entries_size[idx]))
+            .zip(state.entries_size.iter())
             .map(format_item)
             .map(ListItem::new)
             .enumerate()
