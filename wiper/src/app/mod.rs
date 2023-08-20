@@ -1,14 +1,16 @@
 use log::{debug, warn};
 use tui_textarea::TextArea;
 use std::collections::HashSet;
-use std::path::{PathBuf, self};
+use std::path::PathBuf;
 use crate::utils::{statefull_list::StatefulList, key_display::KeyEventWrapper};
 
 use self::actions::Actions;
 use crate::app::actions::Action;
 use crossterm::event::KeyEvent;
-use ratatui::style::{Style, Modifier, Color};
-use ratatui::widgets::{Block, Borders};
+use ratatui::{
+    style::{Style, Modifier, Color},
+    widgets::{Block, Borders}
+};
 use crate::utils::walker::{get_dir_list_from_path, count_and_size, delete_entries};
 
 pub mod actions;
@@ -63,11 +65,6 @@ impl Default for AppState {
     }
 }
 
-#[inline]
-pub fn ref_eq<'a, 'b, T>(thing: &'a T, other: &'b T) -> bool {
-    (thing as *const T) == (other as *const T)
-}
-
 fn activate_text_area(text_area: & mut TextArea, title: String)
     {
         text_area.set_cursor_line_style(Style::default().add_modifier(Modifier::UNDERLINED));
@@ -103,7 +100,7 @@ impl AppState {
         }else {
             &self.filter_text_area
         };
-        if ref_eq(&self.path_text_area, text_area) {
+        if std::ptr::eq(&self.path_text_area, text_area) {
             activate_text_area(&mut self.path_text_area, "Relative Path (Active - Esc to unfocus)".to_string());
         }else {
             activate_text_area(&mut self.filter_text_area, "Filter (Inactive - f to focus)".to_string());
@@ -123,7 +120,7 @@ impl AppState {
             &self.filter_text_area
         };
 
-        if ref_eq(&self.path_text_area, text_area) {
+        if std::ptr::eq(&self.path_text_area, text_area) {
             inactivate_text_area(&mut self.path_text_area, "Relative Path (Inactive - p to focus)".to_string());
         }else {
             inactivate_text_area(&mut self.filter_text_area, "Filter (Inactive - f to focus)".to_string());

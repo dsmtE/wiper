@@ -89,7 +89,7 @@ fn app_infos<'a>(state: &AppState) -> Paragraph<'a> {
             .borders(Borders::ALL)
             .style(Style::default().fg(Color::White))
             .border_type(BorderType::Plain)
-            .title(format!("Infos")),
+            .title("Infos".to_string()),
     )
 }
 

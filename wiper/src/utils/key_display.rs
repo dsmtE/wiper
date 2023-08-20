@@ -7,7 +7,7 @@ impl<'a> ops::Deref for KeyEventWrapper<'a> {
     type Target = KeyEvent;
 
     fn deref(&self) -> &'a Self::Target {
-        &self.0
+        self.0
     }
 }
 

@@ -83,7 +83,7 @@ fn check_action_conflicts(actions: &[Action]) -> Result<(), String> {
         .map(|(key, actions)| {
             format!(
                 "Conflict key {} with actions {}",
-                KeyEventWrapper(&key),
+                KeyEventWrapper(key),
                 vec_to_string(actions, ", ")
             )
         })
