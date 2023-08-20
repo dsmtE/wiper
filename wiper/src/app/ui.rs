@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect, Alignment},
     style::{Color, Style},
     widgets::*,
-    text::{Span, Line},
+    text::{Span, Spans},
     Frame,
 };
 
@@ -17,47 +17,30 @@ where
     B: Backend,
 {
     let size = frame.size();
-    // Vertical layout
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(2), Constraint::Min(10)])
-        .split(size);
-
-    // Title
-    let title = draw_title();
-    frame.render_widget(title, chunks[0]);
 
     // Body & Help
     let body_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([Constraint::Min(20), Constraint::Length(34)])
-        .split(chunks[1]);
+        .split(size);
 
     let content_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(6), Constraint::Min(10)])
+        .constraints([Constraint::Length(4), Constraint::Length(3), Constraint::Length(3), Constraint::Min(10)])
         .split(body_chunks[0]);
 
     let help = draw_help(app.actions());
     frame.render_widget(help, body_chunks[1]);
 
-    // Content
+    // infos
     frame.render_widget(app_infos(app.state()), content_chunks[0]);
+    
+    // text areas
+    frame.render_widget(app.state.path_text_area.widget(), content_chunks[1]);
+    frame.render_widget(app.state.filter_text_area.widget(), content_chunks[2]);
 
     let (content_list, content_list_state) = content(app.state_mut());
-    frame.render_stateful_widget(content_list, content_chunks[1], content_list_state);
-}
-
-fn draw_title<'a>() -> Paragraph<'a> {
-    Paragraph::new("Wiper")
-        .style(Style::default().fg(Color::LightCyan))
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .style(Style::default().fg(Color::White))
-                .border_type(BorderType::Plain),
-        )
+    frame.render_stateful_widget(content_list, content_chunks[3], content_list_state);
 }
 
 pub fn check_size(rect: &Rect) -> Result<()> {
@@ -87,13 +70,11 @@ fn app_infos<'a>(state: &AppState) -> Paragraph<'a> {
                 .sum::<u64>();
         
         Paragraph::new(vec![
-            Line::from(Span::raw(format!("Path: {}", state.path.canonicalize().unwrap().display()))),
-            Line::from(Span::raw(format!("Regex filter: {}", state.regex_filter))),
-            Line::from(Span::raw(format!(
+            Spans::from(Span::raw(format!(
                 "Total space: {:.2}MB",
                 total_space as f32 / 1000000.0
             ))),
-            Line::from(Span::raw(format!(
+            Spans::from(Span::raw(format!(
                 "Total selected space: {:.2}MB ({:.2}%)",
                 total_selected_space as f32 / 1000000.0,
                 total_selected_space as f32 / total_space as f32 * 100.0
@@ -107,7 +88,8 @@ fn app_infos<'a>(state: &AppState) -> Paragraph<'a> {
         Block::default()
             .borders(Borders::ALL)
             .style(Style::default().fg(Color::White))
-            .border_type(BorderType::Plain),
+            .border_type(BorderType::Plain)
+            .title(format!("Infos")),
     )
 }
 
@@ -142,7 +124,7 @@ fn content<'a>(state: &mut AppState) -> (List<'a>, &mut ListState) {
             Block::default()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Plain)
-                .title("Content"),
+                .title(format!("Content from path {}", state.path.canonicalize().unwrap_or("Unknown".into()).display()))
         )
         // .highlight_style(Style::default().fg(Color::LightCyan))
         .highlight_symbol(">> "),

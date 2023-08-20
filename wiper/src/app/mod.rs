@@ -1,11 +1,14 @@
 use log::{debug, warn};
+use tui_textarea::TextArea;
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{PathBuf, self};
 use crate::utils::{statefull_list::StatefulList, key_display::KeyEventWrapper};
 
 use self::actions::Actions;
 use crate::app::actions::Action;
 use crossterm::event::KeyEvent;
+use ratatui::style::{Style, Modifier, Color};
+use ratatui::widgets::{Block, Borders};
 use crate::utils::walker::{get_dir_list_from_path, count_and_size, delete_entries};
 
 pub mod actions;
@@ -40,16 +43,90 @@ pub struct AppState {
     pub entries: StatefulList<walkdir::DirEntry>,
     pub entries_size: Vec<u64>,
     pub selected_entries_idx: HashSet<usize>,
+    pub focused_text_area: Option<u8>,
+    pub path_text_area: TextArea<'static>,
+    pub filter_text_area: TextArea<'static>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
             path: PathBuf::from("."),
-            regex_filter: String::default(),
+            regex_filter: "^node_modules$".to_string(),
             entries: StatefulList::default(),
             entries_size: vec![],
             selected_entries_idx: HashSet::new(),
+            focused_text_area: None,
+            path_text_area: TextArea::from(["."]),
+            filter_text_area: TextArea::from(["^node_modules$"]),
+        }
+    }
+}
+
+#[inline]
+pub fn ref_eq<'a, 'b, T>(thing: &'a T, other: &'b T) -> bool {
+    (thing as *const T) == (other as *const T)
+}
+
+fn activate_text_area(text_area: & mut TextArea, title: String)
+    {
+        text_area.set_cursor_line_style(Style::default().add_modifier(Modifier::UNDERLINED));
+        text_area.set_cursor_style(Style::default().add_modifier(Modifier::REVERSED));
+        let b = text_area
+            .block()
+            .cloned()
+            .unwrap_or_else(|| Block::default().borders(Borders::ALL))
+            .style(Style::default().fg(Color::LightGreen));
+        text_area.set_block(b.title(title));
+    }
+
+fn inactivate_text_area(text_area: &mut TextArea, title: String) {
+        text_area.set_cursor_line_style(Style::default());
+        text_area.set_cursor_style(Style::default());
+        let b = text_area
+            .block()
+            .cloned()
+            .unwrap_or_else(|| Block::default().borders(Borders::ALL))
+            .style(Style::default().fg(Color::DarkGray));
+        text_area.set_block(b.title(title));
+    }
+
+impl AppState {
+    fn activate_focused_text_area(&mut self) {
+
+        if self.focused_text_area.is_none() {
+            return;
+        }
+
+        let text_area = if self.focused_text_area.unwrap() == 0 {
+            &self.path_text_area
+        }else {
+            &self.filter_text_area
+        };
+        if ref_eq(&self.path_text_area, text_area) {
+            activate_text_area(&mut self.path_text_area, "Relative Path (Active - Esc to unfocus)".to_string());
+        }else {
+            activate_text_area(&mut self.filter_text_area, "Filter (Inactive - f to focus)".to_string());
+        }
+        
+    }
+
+    fn inactivate_focused_text_area(&mut self) {
+
+        if self.focused_text_area.is_none() {
+            return;
+        }
+
+        let text_area = if self.focused_text_area.unwrap() == 0 {
+            &self.path_text_area
+        }else {
+            &self.filter_text_area
+        };
+
+        if ref_eq(&self.path_text_area, text_area) {
+            inactivate_text_area(&mut self.path_text_area, "Relative Path (Inactive - p to focus)".to_string());
+        }else {
+            inactivate_text_area(&mut self.filter_text_area, "Filter (Inactive - f to focus)".to_string());
         }
     }
 }
@@ -63,6 +140,20 @@ pub struct App {
 
 impl App {
     pub fn new_from_args(args: &Arguments) -> Self {
+
+        let path = args.root_path.clone().unwrap_or_else(|| PathBuf::from("."));
+        let regex_filter = args.regex_filter.clone();
+        let mut state = AppState {
+            path: path.clone(),
+            regex_filter: regex_filter.clone(),
+            path_text_area : TextArea::from([path.to_str().unwrap()]),
+            filter_text_area : TextArea::from([regex_filter]),
+            ..Default::default()
+        };
+        
+        inactivate_text_area(&mut state.path_text_area, "Relative Path (Inactive - p to focus)".to_string());
+        inactivate_text_area(&mut state.filter_text_area, "Filter (Inactive - f to focus)".to_string());
+
         let mut app = Self {
             actions: Actions::from_iter([
                 Action::Quit,
@@ -70,12 +161,11 @@ impl App {
                 Action::ToggleCurrent,
                 Action::Up,
                 Action::Down,
+                Action::EditPath,
+                Action::EditFilter,
+                Action::UnfocusTextArea,
             ]),
-            state: AppState {
-                path: args.root_path.clone().unwrap_or_else(|| PathBuf::from(".")),
-                regex_filter: args.regex_filter.clone(),
-                ..Default::default()
-            },
+            state,
         };
 
         app.scan_dir_update();
@@ -90,6 +180,33 @@ impl App {
         }
 
         let optional_action = self.actions.find(key_event);
+
+        if let Some(n) = self.state.focused_text_area {
+            if let Some(Action::UnfocusTextArea) = optional_action {
+
+                // update path state value from text area 
+                if n == 0 {
+                    self.state.path = PathBuf::from(self.state.path_text_area.lines()[0].clone());
+                } else {
+                    self.state.regex_filter = self.state.filter_text_area.lines()[0].clone();
+                }
+                self.scan_dir_update();
+
+                self.state.inactivate_focused_text_area();
+                self.state.focused_text_area = None;
+
+                return AppReturn::Continue;
+            }
+            
+            let text_area = if self.state.focused_text_area.unwrap() == 0 {
+                &mut self.state.path_text_area
+            }else {
+                &mut self.state.filter_text_area
+            };
+
+            text_area.input(tui_textarea::Input::from(key_event));
+            return AppReturn::Continue;
+        }
 
         if optional_action.is_none() {
             warn!("No action associated to {}", KeyEventWrapper(&key_event));
@@ -134,6 +251,18 @@ impl App {
             },
             Action::Quit => {
                 return AppReturn::Exit;
+            },
+            Action::EditPath => {
+                self.state.focused_text_area = Some(0);
+                self.state.activate_focused_text_area();
+            },
+            Action::EditFilter => {
+                self.state.focused_text_area = Some(1);
+                self.state.activate_focused_text_area();
+            },
+            // Should not happen because we check if we are focused before
+            Action::UnfocusTextArea => {
+                self.state.focused_text_area = None;
             },
         }
         AppReturn::Continue

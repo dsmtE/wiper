@@ -12,6 +12,9 @@ pub enum Action {
     DeleteSelectedEntries,
     Up,
     Down,
+    EditPath,
+    EditFilter,
+    UnfocusTextArea,
 }
 
 impl Action {
@@ -23,6 +26,9 @@ impl Action {
             Action::DeleteSelectedEntries => vec![KeyEvent::new(KeyCode::Char('d'), KeyModifiers::NONE)],
             Action::Up => vec![KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)],
             Action::Down => vec![KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)],
+            Action::EditPath => vec![KeyEvent::new(KeyCode::Char('p'), KeyModifiers::NONE)],
+            Action::EditFilter => vec![KeyEvent::new(KeyCode::Char('f'), KeyModifiers::NONE)],
+            Action::UnfocusTextArea => vec![KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)],
         }
     }
 }
