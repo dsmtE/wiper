@@ -218,7 +218,7 @@ impl App {
                 let state = self.state();
                 let entries_to_delete = state.selected_entries_idx
                     .iter()
-                    .map(|idx| state.entries.items()[*idx].clone())
+                    .map(|idx| state.entries.items[*idx].clone())
                     .collect::<Vec<_>>();
 
                 if let Err(e) = delete_entries(&entries_to_delete) {
@@ -229,7 +229,7 @@ impl App {
             },
             Action::ToggleCurrent => {
                 let state = self.state_mut();
-                let current_idx = state.entries.state().selected();
+                let current_idx = state.entries.state.selected();
                 if let Some(idx) = current_idx {
                     if state.selected_entries_idx.contains(&idx) {
                         state.selected_entries_idx.remove(&idx);

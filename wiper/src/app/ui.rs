@@ -104,7 +104,7 @@ fn format_item(item: (&walkdir::DirEntry, u64)) -> String {
 fn content<'a>(state: &mut AppState) -> (List<'a>, &mut ListState) {
     (List::new(
         state.entries
-            .items()
+            .items
             .iter()
             .enumerate()
             .map(|(idx, e)| (e, state.entries_size[idx]))
@@ -128,7 +128,7 @@ fn content<'a>(state: &mut AppState) -> (List<'a>, &mut ListState) {
         )
         // .highlight_style(Style::default().fg(Color::LightCyan))
         .highlight_symbol(">> "),
-        state.entries.state_mut())
+        &mut state.entries.state)
 }
 
 fn draw_help(actions: &Actions) -> Table {
