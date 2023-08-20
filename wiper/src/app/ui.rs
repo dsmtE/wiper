@@ -3,7 +3,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect, Alignment},
     style::{Color, Style},
     widgets::*,
-    text::{Span, Spans},
+    text::{Span, Line},
     Frame,
 };
 
@@ -70,11 +70,11 @@ fn app_infos<'a>(state: &AppState) -> Paragraph<'a> {
                 .sum::<u64>();
         
         Paragraph::new(vec![
-            Spans::from(Span::raw(format!(
+            Line::from(Span::raw(format!(
                 "Total space: {:.2}MB",
                 total_space as f32 / 1000000.0
             ))),
-            Spans::from(Span::raw(format!(
+            Line::from(Span::raw(format!(
                 "Total selected space: {:.2}MB ({:.2}%)",
                 total_selected_space as f32 / 1000000.0,
                 total_selected_space as f32 / total_space as f32 * 100.0

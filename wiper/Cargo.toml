@@ -9,8 +9,9 @@ clap = {version = "4.*", features = ["derive"]}
 
 log = "0.4"
 eyre = "0.6"
-ratatui = { version = "0.20.1", features = ['crossterm', 'serde'] }
-tui-textarea = { git = "https://github.com/rhysd/tui-textarea", version = "0.2.0", features = ["ratatui-crossterm"], default-features=false }
+ratatui = { version = "0.22.0", features = ['crossterm', 'serde'] }
+# Fork of tui-textarea with an updated ratatui dependency (PR not merged yet)
+tui-textarea = { git = "https://github.com/sadovsf/tui-textarea", version = "0.2.0", features = ["ratatui-crossterm"], default-features=false }
 crossterm = "0.26"
 
 strum = "0.25"
