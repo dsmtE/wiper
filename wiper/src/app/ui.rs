@@ -26,21 +26,30 @@ where
 
     let content_chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(4), Constraint::Length(3), Constraint::Length(3), Constraint::Min(10)])
+        .constraints([Constraint::Length(3), Constraint::Length(3), Constraint::Length(2), Constraint::Min(3)])
         .split(body_chunks[0]);
 
     let help = draw_help(app.actions());
     frame.render_widget(help, body_chunks[1]);
 
-    // infos
-    frame.render_widget(app_infos(app.state()), content_chunks[0]);
-    
     // text areas
-    frame.render_widget(app.state.path_text_area.widget(), content_chunks[1]);
-    frame.render_widget(app.state.filter_text_area.widget(), content_chunks[2]);
+    frame.render_widget(app.state.path_text_area.widget(), content_chunks[0]);
+    frame.render_widget(app.state.filter_text_area.widget(), content_chunks[1]);
+
+    // infos
+    frame.render_widget(app_infos(app.state()), content_chunks[2]);
 
     let (content_list, content_list_state) = content(app.state_mut());
     frame.render_stateful_widget(content_list, content_chunks[3], content_list_state);
+
+    frame.render_stateful_widget(
+        Scrollbar::default()
+            .orientation(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(Some("↑"))
+            .end_symbol(Some("↓")),
+            content_chunks[3],
+        &mut app.state.entries.get_scrollbar_state(),
+    );
 }
 
 pub fn check_size(rect: &Rect) -> Result<()> {
@@ -84,13 +93,6 @@ fn app_infos<'a>(state: &AppState) -> Paragraph<'a> {
 
     paragraph.style(Style::default().fg(Color::LightCyan))
     .alignment(Alignment::Left)
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .style(Style::default().fg(Color::White))
-            .border_type(BorderType::Plain)
-            .title("Infos".to_string()),
-    )
 }
 
 fn format_item(item: (&walkdir::DirEntry, &u64)) -> String {

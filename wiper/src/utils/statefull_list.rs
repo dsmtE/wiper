@@ -1,4 +1,4 @@
-use ratatui::widgets::ListState;
+use ratatui::widgets::{ListState, ScrollbarState};
 
 #[derive(Clone)]
 pub struct StatefulList<T> {
@@ -30,6 +30,12 @@ impl<T> StatefulList<T> {
 
     pub fn unselect(&mut self) {
         self.state.select(None);
+    }
+
+    pub fn get_scrollbar_state(&self) -> ScrollbarState {
+        ScrollbarState::default()
+        .position(self.state.selected().unwrap_or(0) as u16)
+        .content_length(self.items.len() as u16)
     }
 
 }
