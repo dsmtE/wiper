@@ -1,0 +1,25 @@
+[package]
+name = "wiper"
+version = "0.0.1"
+edition = "2021"
+authors = ["Enguerrand DE SMET"]
+
+[dependencies]
+log = "0.4"
+eyre = "0.6"
+tui = { version = "0.19.0", features = ['crossterm', 'serde'] }
+crossterm = "0.26.1"
+
+tokio = { version = "1", features = ["full"] }
+
+strum = "0.24"
+strum_macros = "0.24"
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+strip = true
+opt-level = 3
+lto = true
+codegen-units = 1
