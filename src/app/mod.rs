@@ -232,6 +232,9 @@ impl App {
         &self.state
     }
 
+    pub fn tick(&mut self) {
+    }
+
     pub fn state_mut(&mut self) -> &mut AppState {
         &mut self.state
     }

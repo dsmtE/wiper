@@ -14,6 +14,7 @@ use crossterm::{
 };
 
 use app::{App, AppReturn};
+use utils::event_handler::{EventsHandler, TerminalEvent};
 
 use crate::app::ui;
 
@@ -23,9 +24,12 @@ pub mod utils;
 pub fn start_terminal_app(app: &mut App) -> Result<()> {
     let mut terminal = setup_terminal()?;
 
-    let loop_error_report = run_loop(app, &mut terminal);
+    let mut events_handler = EventsHandler::new(Duration::from_millis(100));
+
+    let loop_error_report = run_loop(app, &mut terminal, &mut events_handler);
 
     restore_terminal(&mut terminal)?;
+    events_handler.close();
 
     if let Err(e) = loop_error_report {
         println!("Error in the main loop:\n{}", e);
@@ -34,19 +38,32 @@ pub fn start_terminal_app(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-fn run_loop(app: &mut App, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<()> {
+fn run_loop(app: &mut App, terminal: &mut Terminal<CrosstermBackend<Stdout>>, events_handler: &mut EventsHandler) -> Result<()> {
     loop {
         // Check if the terminal is big enough
         ui::check_size(&terminal.get_frame().size()).context("Unable to continue, the terminal is too small.")?;
 
         terminal.draw(|frame| ui::draw(frame, app))?;
         
-        for key_event in get_key_input_events(Duration::from_millis(200)) {
-            // Check if we should exit
-            if app.key_event(key_event) == AppReturn::Exit {
-                return Ok(());
+        if let Ok(event) = events_handler.next() {
+            match event {
+                TerminalEvent::Event(event) => {
+                    
+                    if let event::Event::Key(key_event) = event {
+                        // Check if we should exit
+                        if app.key_event(key_event) == AppReturn::Exit {
+                            return Ok(());
+                        }
+                    }
+                },
+                TerminalEvent::Tick => {
+                    app.tick();
+                }
             }
         }
+
+        // wait for the next tick
+        std::thread::sleep(Duration::from_millis(500));
     }
 }
 
@@ -69,16 +86,4 @@ fn restore_terminal(
     execute!(terminal.backend_mut(), terminal::LeaveAlternateScreen)?;
     terminal.show_cursor()?;
     Ok(())
-}
-
-pub fn get_key_input_events(tick_rate: Duration) -> Vec<KeyEvent> {
-    let mut input_events: Vec<KeyEvent> = Vec::new();
-
-    while event::poll(tick_rate).context("event poll failed").unwrap()  {
-        if let event::Event::Key(key_event) = event::read().context("event read failed").unwrap() {
-            input_events.push(key_event);
-        }
-    }
-
-    input_events
 }
